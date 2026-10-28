@@ -132,8 +132,7 @@ export function Index() {
       <h1 className="mb-8 text-center text-5xl font-medium tracking-tight">Todo - Week</h1>
       <div className="mx-auto max-w-[720px] rounded-[3.5rem] bg-card px-6 py-12 shadow-soft sm:px-[90px]">
         {DAYS.map((d, i) => {
-          const open = editing?.day === d.name;
-          const editTask = editing?.mode === "edit" && open ? tasks[d.name]?.find((x) => x.id === editing.id) : undefined;
+          const openNew = editing?.mode === "new" && editing.day === d.name;
           return (
             <section key={d.name} className={i > 0 ? "mt-12" : ""}>
               <div className="mb-6 flex items-center justify-between">
@@ -143,20 +142,19 @@ export function Index() {
                 </h2>
                 <button
                   aria-label={`Add task to ${d.name}`}
-                  onClick={() => setEditing(open && editing?.mode === "new" ? null : { mode: "new", day: d.name })}
+                  onClick={() => setEditing(openNew ? null : { mode: "new", day: d.name })}
                   className="grid h-14 w-14 place-items-center rounded-full bg-tag-green text-ink shadow-soft transition duration-300 hover:scale-110 active:scale-95"
                 >
-                  <Plus className={`h-9 w-9 transition-transform duration-300 ${open && editing?.mode === "new" ? "rotate-45" : ""}`} strokeWidth={3} />
+                  <Plus className={`h-9 w-9 transition-transform duration-300 ${openNew ? "rotate-45" : ""}`} strokeWidth={3} />
                 </button>
               </div>
-              <div className={`grid transition-all duration-500 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <div className={`grid transition-all duration-500 ease-out ${openNew ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                 <div className="overflow-hidden">
-                  {open && editing && (
+                  {openNew && (
                     <TaskForm
-                      key={editing.mode === "edit" ? `e${editing.id}` : `n${d.name}`}
-                      initial={editTask ? { ...editTask, day: d.name } : { title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
-                      isEdit={editing.mode === "edit"}
-                      onDelete={editing.mode === "edit" ? () => remove(editing.day, editing.id) : undefined}
+                      key={`n${d.name}`}
+                      initial={{ title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
+                      isEdit={false}
                       onSave={save}
                       onCancel={() => setEditing(null)}
                     />
