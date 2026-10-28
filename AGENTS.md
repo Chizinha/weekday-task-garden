@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Route files export their page component in addition to `Route`, so behaviour tests can render the page directly instead of driving the router.

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Plus, Clock } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
@@ -51,7 +51,7 @@ const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
 
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
-function Index() {
+export function Index() {
   const [tasks, setTasks] = useState<Record<string, Task[]>>({
     Monday: [sample("pink", true, "09:00"), sample("yellow", false, "14:30")],
     Tuesday: [sample("blue", true, "10:00"), sample("pink", true, "13:00"), sample("yellow", false, "18:00")],
@@ -169,80 +169,166 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
 function TaskForm({ initial, isEdit, onSave, onCancel }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void }) {
   const [d, setD] = useState<Draft>(initial);
   const [status, setStatus] = useState("");
+  const [sendOpen, setSendOpen] = useState(false);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const field = "rounded-xl border border-line bg-card px-4 py-3 outline-none transition focus:border-tag-pink placeholder:text-ink";
 
-  const share = async () => {
-    if (!d.title.trim()) return setStatus("Add a title first");
-    const text = `📝 ${d.title}\n📅 ${d.day} at ${d.deadline}\n${d.description}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: d.title, text });
-        setStatus("Shared!");
-      } else {
-        await navigator.clipboard.writeText(text);
-        setStatus("Copied — paste it to a friend!");
-      }
-    } catch {
-      setStatus("Sharing cancelled");
+  return (
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!d.title.trim()) return setStatus("Add a title first");
+          onSave(d);
+        }}
+        className="mb-8 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-10"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
+          <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
+        </div>
+        <textarea
+          value={d.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder="Description text that describes the task..."
+          rows={2}
+          className={`${field} mt-6 w-full resize-none text-xl font-light`}
+        />
+        <div className="mt-6 flex flex-wrap gap-2">
+          {DAYS.map((x) => (
+            <button
+              type="button"
+              key={x.name}
+              onClick={() => set("day", x.name)}
+              className={`rounded-full px-3 py-1.5 text-sm transition duration-200 hover:scale-105 ${d.day === x.name ? `${tagBg[d.tag]} font-medium shadow-soft` : "bg-muted"}`}
+            >
+              {x.name.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex gap-3">
+          {TAGS.map((c) => (
+            <button
+              type="button"
+              key={c}
+              aria-label={`${c} tag`}
+              onClick={() => set("tag", c)}
+              className={`h-10 w-10 rounded-full shadow-soft transition duration-200 hover:scale-110 ${tagBg[c]} ${d.tag === c ? "scale-110 ring-2 ring-ink-soft ring-offset-2" : ""}`}
+            />
+          ))}
+        </div>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button type="submit" className="rounded-full bg-tag-green px-7 py-3 text-lg font-medium shadow-soft transition hover:scale-105 active:scale-95">
+            {isEdit ? "Save changes" : "Add to list"}
+          </button>
+          <button
+            type="button"
+            onClick={() => (d.title.trim() ? setSendOpen(true) : setStatus("Add a title first"))}
+            className="rounded-full border border-line bg-card px-7 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-muted active:scale-95"
+          >
+            Send task
+          </button>
+          <button type="button" onClick={onCancel} className="px-3 py-3 text-lg opacity-70 transition hover:opacity-100">
+            Cancel
+          </button>
+          {status && <span className="animate-in fade-in text-sm">{status}</span>}
+        </div>
+      </form>
+      {sendOpen && (
+        <SendModal
+          task={d}
+          onClose={() => setSendOpen(false)}
+          onSent={(who) => {
+            setSendOpen(false);
+            setStatus(`Sent to ${who}`);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function SendModal({ task, onClose, onSent }: { task: Draft; onClose: () => void; onSent: (who: string) => void }) {
+  const [who, setWho] = useState("");
+  const [error, setError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const send = () => {
+    const to = who.trim();
+    if (!to) {
+      setError("Add a username or e-mail first");
+      inputRef.current?.focus();
+      return;
     }
+    const text = `📝 ${task.title}\n📅 ${task.day} at ${task.deadline}\n${task.description}`;
+    navigator.clipboard?.writeText(text).catch(() => {});
+    onSent(to.startsWith("@") || to.includes("@") ? to : `@${to}`);
   };
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!d.title.trim()) return setStatus("Add a title first");
-        onSave(d);
-      }}
-      className="mb-8 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-10"
+    <div
+      className="fixed inset-0 z-50 grid animate-in fade-in place-items-center bg-ink/30 p-4 backdrop-blur-sm duration-200"
+      onClick={onClose}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
-        <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
-      </div>
-      <textarea
-        value={d.description}
-        onChange={(e) => set("description", e.target.value)}
-        placeholder="Description text that describes the task..."
-        rows={2}
-        className={`${field} mt-6 w-full resize-none text-xl font-light`}
-      />
-      <div className="mt-6 flex flex-wrap gap-2">
-        {DAYS.map((x) => (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Send task"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md animate-in fade-in zoom-in-95 slide-in-from-bottom-4 rounded-[2rem] border border-line bg-card p-6 shadow-soft duration-300 sm:p-8"
+      >
+        <h3 className="text-2xl font-medium">Send this task</h3>
+        <div className={`mt-5 rounded-3xl px-5 py-4 ${tagBg[task.tag]}`}>
+          <div className="flex justify-between gap-3 text-xl font-medium">
+            <span>{task.title}</span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              {task.deadline}
+            </span>
+          </div>
+          <p className="mt-2 text-lg font-light">{task.description || "No description yet"}</p>
+          <p className="mt-2 text-sm opacity-70">{task.day}</p>
+        </div>
+        <label htmlFor="recipient" className="mt-6 block text-lg font-medium">
+          Username or e-mail
+        </label>
+        <input
+          id="recipient"
+          ref={inputRef}
+          value={who}
+          onChange={(e) => {
+            setWho(e.target.value);
+            setError("");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), send())}
+          placeholder="@username or name@mail.com"
+          className="mt-2 w-full rounded-xl border border-line bg-card px-4 py-3 text-lg outline-none transition focus:border-tag-pink hover:bg-muted"
+        />
+        {error && <p className="mt-2 animate-in fade-in text-sm">{error}</p>}
+        <div className="mt-6 flex flex-wrap gap-3">
           <button
-            type="button"
-            key={x.name}
-            onClick={() => set("day", x.name)}
-            className={`rounded-full px-3 py-1.5 text-sm transition duration-200 hover:scale-105 ${d.day === x.name ? `${tagBg[d.tag]} font-medium shadow-soft` : "bg-muted"}`}
+            onClick={send}
+            className="rounded-full bg-tag-green px-7 py-3 text-lg font-medium shadow-soft transition hover:scale-105 active:scale-95"
           >
-            {x.name.slice(0, 3)}
+            Send
           </button>
-        ))}
-      </div>
-      <div className="mt-5 flex gap-3">
-        {TAGS.map((c) => (
           <button
-            type="button"
-            key={c}
-            aria-label={`${c} tag`}
-            onClick={() => set("tag", c)}
-            className={`h-10 w-10 rounded-full shadow-soft transition duration-200 hover:scale-110 ${tagBg[c]} ${d.tag === c ? "scale-110 ring-2 ring-ink-soft ring-offset-2" : ""}`}
-          />
-        ))}
+            onClick={onClose}
+            className="rounded-full border border-line bg-card px-7 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-muted active:scale-95"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button type="submit" className="rounded-full bg-tag-green px-7 py-3 text-lg font-medium shadow-soft transition hover:scale-105 active:scale-95">
-          {isEdit ? "Save changes" : "Add to list"}
-        </button>
-        <button type="button" onClick={share} className="rounded-full border border-line bg-card px-7 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-muted active:scale-95">
-          Send task
-        </button>
-        <button type="button" onClick={onCancel} className="px-3 py-3 text-lg opacity-70 transition hover:opacity-100">
-          Cancel
-        </button>
-        {status && <span className="animate-in fade-in text-sm">{status}</span>}
-      </div>
-    </form>
+    </div>
   );
 }
