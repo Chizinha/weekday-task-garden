@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, Plus, Clock, Trash2 } from "lucide-react";
+import { Check, Plus, Clock, Trash2, Pencil } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
 export const Route = createFileRoute("/")({
@@ -162,31 +162,57 @@ export function Index() {
                 </div>
               </div>
               <ul className="space-y-4">
-                {(tasks[d.name] ?? []).map((t) => (
-                  <li key={t.id} className="flex animate-in fade-in slide-in-from-bottom-2 items-center gap-5 duration-300">
-                    <button
-                      aria-label={t.done ? "Mark as not done" : "Mark as done"}
-                      onClick={() => toggle(d.name, t.id)}
-                      className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full transition hover:scale-105 active:scale-90 ${tagBg[t.tag]}`}
-                    >
-                      {t.done && (
-                        <span className="grid h-11 w-11 animate-pop place-items-center rounded-full bg-ink-soft text-card">
-                          <Check className="h-6 w-6 animate-draw" strokeWidth={3} />
-                        </span>
+                {(tasks[d.name] ?? []).map((t) => {
+                  const editingThis = editing?.mode === "edit" && editing.id === t.id && editing.day === d.name;
+                  return (
+                    <li key={t.id} className="flex animate-in fade-in slide-in-from-bottom-2 items-start gap-5 duration-300">
+                      {editing && editingThis ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            className={`mt-1 grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full ${tagBg[t.tag]}`}
+                          >
+                            <Pencil className="h-6 w-6" strokeWidth={2.5} />
+                          </span>
+                          <TaskForm
+                            key={`e${t.id}`}
+                            initial={{ ...t, day: d.name }}
+                            isEdit
+                            inPlace
+                            accent={tagBg[t.tag]}
+                            onDelete={() => remove(d.name, t.id)}
+                            onSave={save}
+                            onCancel={() => setEditing(null)}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            aria-label={t.done ? "Mark as not done" : "Mark as done"}
+                            onClick={() => toggle(d.name, t.id)}
+                            className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full transition hover:scale-105 active:scale-90 ${tagBg[t.tag]}`}
+                          >
+                            {t.done && (
+                              <span className="grid h-11 w-11 animate-pop place-items-center rounded-full bg-ink-soft text-card">
+                                <Check className="h-6 w-6 animate-draw" strokeWidth={3} />
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setEditing({ mode: "edit", day: d.name, id: t.id })}
+                            className={`flex-1 rounded-3xl px-6 py-5 text-left transition duration-300 hover:-translate-y-0.5 hover:shadow-soft ${tagBg[t.tag]} ${t.done ? "opacity-70" : ""}`}
+                          >
+                            <div className="flex justify-between gap-3 text-xl font-medium">
+                              <span className={t.done ? "line-through decoration-2" : ""}>{t.title}</span>
+                              <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{t.deadline}</span>
+                            </div>
+                            <p className="mt-2 text-lg">{t.description}</p>
+                          </button>
+                        </>
                       )}
-                    </button>
-                    <button
-                      onClick={() => setEditing({ mode: "edit", day: d.name, id: t.id })}
-                      className={`flex-1 rounded-3xl px-6 py-5 text-left transition duration-300 hover:-translate-y-0.5 hover:shadow-soft ${tagBg[t.tag]} ${t.done ? "opacity-70" : ""}`}
-                    >
-                      <div className="flex justify-between gap-3 text-xl font-medium">
-                        <span className={t.done ? "line-through decoration-2" : ""}>{t.title}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{t.deadline}</span>
-                      </div>
-                      <p className="mt-2 text-lg">{t.description}</p>
-                    </button>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           );
@@ -213,7 +239,7 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined }) {
+function TaskForm({ initial, isEdit, onSave, onCancel, onDelete, inPlace = false, accent = "bg-card" }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined; inPlace?: boolean; accent?: string }) {
   const [d, setD] = useState<Draft>(initial);
   const [status, setStatus] = useState("");
   const [sendOpen, setSendOpen] = useState(false);
@@ -223,12 +249,13 @@ function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Dr
   return (
     <>
       <form
+        aria-label={isEdit ? `Edit task ${initial.title}` : "New task"}
         onSubmit={(e) => {
           e.preventDefault();
           if (!d.title.trim()) return setStatus("Add a title first");
           onSave(d);
         }}
-        className="mb-8 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-10"
+        className={`rounded-[2rem] border border-line p-6 shadow-soft sm:px-10 ${accent} ${inPlace ? "flex-1 animate-in fade-in zoom-in-95 duration-300" : "mb-8"}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
