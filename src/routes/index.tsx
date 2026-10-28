@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, Plus, Clock, Trash2 } from "lucide-react";
+import { Check, Plus, Clock, Trash2, Pencil } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
 export const Route = createFileRoute("/")({
@@ -132,8 +132,7 @@ export function Index() {
       <h1 className="mb-8 text-center text-5xl font-medium tracking-tight">Todo - Week</h1>
       <div className="mx-auto max-w-[720px] rounded-[3.5rem] bg-card px-6 py-12 shadow-soft sm:px-[90px]">
         {DAYS.map((d, i) => {
-          const open = editing?.day === d.name;
-          const editTask = editing?.mode === "edit" && open ? tasks[d.name]?.find((x) => x.id === editing.id) : undefined;
+          const openNew = editing?.mode === "new" && editing.day === d.name;
           return (
             <section key={d.name} className={i > 0 ? "mt-12" : ""}>
               <div className="mb-6 flex items-center justify-between">
@@ -143,20 +142,19 @@ export function Index() {
                 </h2>
                 <button
                   aria-label={`Add task to ${d.name}`}
-                  onClick={() => setEditing(open && editing?.mode === "new" ? null : { mode: "new", day: d.name })}
+                  onClick={() => setEditing(openNew ? null : { mode: "new", day: d.name })}
                   className="grid h-14 w-14 place-items-center rounded-full bg-tag-green text-ink shadow-soft transition duration-300 hover:scale-110 active:scale-95"
                 >
-                  <Plus className={`h-9 w-9 transition-transform duration-300 ${open && editing?.mode === "new" ? "rotate-45" : ""}`} strokeWidth={3} />
+                  <Plus className={`h-9 w-9 transition-transform duration-300 ${openNew ? "rotate-45" : ""}`} strokeWidth={3} />
                 </button>
               </div>
-              <div className={`grid transition-all duration-500 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <div className={`grid transition-all duration-500 ease-out ${openNew ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                 <div className="overflow-hidden">
-                  {open && editing && (
+                  {openNew && (
                     <TaskForm
-                      key={editing.mode === "edit" ? `e${editing.id}` : `n${d.name}`}
-                      initial={editTask ? { ...editTask, day: d.name } : { title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
-                      isEdit={editing.mode === "edit"}
-                      onDelete={editing.mode === "edit" ? () => remove(editing.day, editing.id) : undefined}
+                      key={`n${d.name}`}
+                      initial={{ title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
+                      isEdit={false}
                       onSave={save}
                       onCancel={() => setEditing(null)}
                     />
@@ -164,31 +162,57 @@ export function Index() {
                 </div>
               </div>
               <ul className="space-y-4">
-                {(tasks[d.name] ?? []).map((t) => (
-                  <li key={t.id} className="flex animate-in fade-in slide-in-from-bottom-2 items-center gap-5 duration-300">
-                    <button
-                      aria-label={t.done ? "Mark as not done" : "Mark as done"}
-                      onClick={() => toggle(d.name, t.id)}
-                      className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full transition hover:scale-105 active:scale-90 ${tagBg[t.tag]}`}
-                    >
-                      {t.done && (
-                        <span className="grid h-11 w-11 animate-pop place-items-center rounded-full bg-ink-soft text-card">
-                          <Check className="h-6 w-6 animate-draw" strokeWidth={3} />
-                        </span>
+                {(tasks[d.name] ?? []).map((t) => {
+                  const editingThis = editing?.mode === "edit" && editing.id === t.id && editing.day === d.name;
+                  return (
+                    <li key={t.id} className="flex animate-in fade-in slide-in-from-bottom-2 items-start gap-5 duration-300">
+                      {editing && editingThis ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            className={`mt-6 grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full ${tagBg[t.tag]}`}
+                          >
+                            <Pencil className="h-6 w-6" strokeWidth={2.5} />
+                          </span>
+                          <TaskForm
+                            key={`e${t.id}`}
+                            initial={{ ...t, day: d.name }}
+                            isEdit
+                            inPlace
+                            accent={tagBg[t.tag]}
+                            onDelete={() => remove(d.name, t.id)}
+                            onSave={save}
+                            onCancel={() => setEditing(null)}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            aria-label={t.done ? "Mark as not done" : "Mark as done"}
+                            onClick={() => toggle(d.name, t.id)}
+                            className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full transition hover:scale-105 active:scale-90 ${tagBg[t.tag]}`}
+                          >
+                            {t.done && (
+                              <span className="grid h-11 w-11 animate-pop place-items-center rounded-full bg-ink-soft text-card">
+                                <Check className="h-6 w-6 animate-draw" strokeWidth={3} />
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setEditing({ mode: "edit", day: d.name, id: t.id })}
+                            className={`flex-1 rounded-3xl px-6 py-5 text-left transition duration-300 hover:-translate-y-0.5 hover:shadow-soft ${tagBg[t.tag]} ${t.done ? "opacity-70" : ""}`}
+                          >
+                            <div className="flex justify-between gap-3 text-xl font-medium">
+                              <span className={t.done ? "line-through decoration-2" : ""}>{t.title}</span>
+                              <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{t.deadline}</span>
+                            </div>
+                            <p className="mt-2 text-lg">{t.description}</p>
+                          </button>
+                        </>
                       )}
-                    </button>
-                    <button
-                      onClick={() => setEditing({ mode: "edit", day: d.name, id: t.id })}
-                      className={`flex-1 rounded-3xl px-6 py-5 text-left transition duration-300 hover:-translate-y-0.5 hover:shadow-soft ${tagBg[t.tag]} ${t.done ? "opacity-70" : ""}`}
-                    >
-                      <div className="flex justify-between gap-3 text-xl font-medium">
-                        <span className={t.done ? "line-through decoration-2" : ""}>{t.title}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{t.deadline}</span>
-                      </div>
-                      <p className="mt-2 text-lg">{t.description}</p>
-                    </button>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           );
@@ -215,7 +239,7 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined }) {
+function TaskForm({ initial, isEdit, onSave, onCancel, onDelete, inPlace = false, accent = "bg-card" }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined; inPlace?: boolean; accent?: string }) {
   const [d, setD] = useState<Draft>(initial);
   const [status, setStatus] = useState("");
   const [sendOpen, setSendOpen] = useState(false);
@@ -225,15 +249,16 @@ function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Dr
   return (
     <>
       <form
+        aria-label={isEdit ? `Edit task ${initial.title}` : "New task"}
         onSubmit={(e) => {
           e.preventDefault();
           if (!d.title.trim()) return setStatus("Add a title first");
           onSave(d);
         }}
-        className="mb-8 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-10"
+        className={`rounded-[2rem] border border-line p-6 shadow-soft sm:px-10 ${accent} ${inPlace ? "flex-1 animate-in fade-in zoom-in-95 duration-300" : "mb-8"}`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
+        <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-full text-2xl font-medium`} />
+        <div className="mt-4 flex justify-end">
           <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
         </div>
         <textarea
