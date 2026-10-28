@@ -39,13 +39,9 @@ const DAYS = [
   { name: "Sunday", icon: "💐" },
 ];
 
-const STORAGE_KEY = "todo-week.tasks.v1";
-
 let nextId = 100;
-const newId = () => nextId++;
-
-const sample = (id: number, tag: Tag, done: boolean, deadline = "12:00"): Task => ({
-  id,
+const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
+  id: nextId++,
   title: "Title",
   deadline,
   description: "Description text that describes the task",
@@ -53,77 +49,27 @@ const sample = (id: number, tag: Tag, done: boolean, deadline = "12:00"): Task =
   done,
 });
 
-const seedTasks = (): Record<string, Task[]> => ({
-  Monday: [sample(1, "pink", true, "09:00"), sample(2, "yellow", false, "14:30")],
-  Tuesday: [sample(3, "blue", true, "10:00"), sample(4, "pink", true, "13:00"), sample(5, "yellow", false, "18:00")],
-});
-
-// Storage can hold half-written or hand-edited JSON, so unusable entries are dropped.
-const readStored = (): Record<string, Task[]> | null => {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as Record<string, unknown>;
-    if (!data || typeof data !== "object") return null;
-    const out: Record<string, Task[]> = {};
-    for (const [day, list] of Object.entries(data)) {
-      if (!Array.isArray(list)) continue;
-      out[day] = list.filter(
-        (t): t is Task =>
-          !!t &&
-          typeof t === "object" &&
-          typeof (t as Task).id === "number" &&
-          typeof (t as Task).title === "string" &&
-          TAGS.includes((t as Task).tag),
-      );
-    }
-    return out;
-  } catch {
-    return null;
-  }
-};
-
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
 export function Index() {
-  const [tasks, setTasks] = useState<Record<string, Task[]>>(seedTasks);
-  const [loaded, setLoaded] = useState(false);
+  const [tasks, setTasks] = useState<Record<string, Task[]>>({
+    Monday: [sample("pink", true, "09:00"), sample("yellow", false, "14:30")],
+    Tuesday: [sample("blue", true, "10:00"), sample("pink", true, "13:00"), sample("yellow", false, "18:00")],
+  });
   const [editing, setEditing] = useState<Editing>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  // The saved list is read only after the page is up, so the first paint never
-  // differs between visits and a refresh can't overwrite what's already stored.
-  useEffect(() => {
-    const stored = readStored();
-    if (stored) {
-      for (const list of Object.values(stored)) nextId = list.reduce((m, t) => Math.max(m, t.id + 1), nextId);
-      setTasks(stored);
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch {
-      // Private browsing or a full quota: the planner still works for this visit.
-    }
-  }, [tasks, loaded]);
 
   const toggle = (day: string, id: number) =>
     setTasks((t) => ({ ...t, [day]: (t[day] ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) }));
 
   const save = ({ day, ...task }: Draft) => {
-    const id = editing?.mode === "edit" ? editing.id : newId();
     setTasks((t) => {
       const next = { ...t };
       if (editing?.mode === "edit") {
         const old = (next[editing.day] ?? []).find((x) => x.id === editing.id);
         next[editing.day] = (next[editing.day] ?? []).filter((x) => x.id !== editing.id);
-        next[day] = [...(next[day] ?? []), { ...task, id, done: old?.done ?? false }];
+        next[day] = [...(next[day] ?? []), { ...task, id: editing.id, done: old?.done ?? false }];
       } else {
-        next[day] = [...(next[day] ?? []), { ...task, id, done: false }];
+        next[day] = [...(next[day] ?? []), { ...task, id: nextId++, done: false }];
       }
       return next;
     });
