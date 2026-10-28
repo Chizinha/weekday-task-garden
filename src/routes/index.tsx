@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, Clock } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
 export const Route = createFileRoute("/")({
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/")({
 
 type Tag = "green" | "yellow" | "pink" | "blue";
 type Task = { id: number; title: string; deadline: string; description: string; tag: Tag; done: boolean };
+type Draft = Omit<Task, "id" | "done"> & { day: string };
 
 const TAGS: Tag[] = ["green", "yellow", "pink", "blue"];
 const tagBg: Record<Tag, string> = {
@@ -31,31 +32,48 @@ const tagBg: Record<Tag, string> = {
 const DAYS = [
   { name: "Monday", icon: "🌸" },
   { name: "Tuesday", icon: "🪻" },
+  { name: "Wednesday", icon: "🌼" },
+  { name: "Thursday", icon: "🌷" },
+  { name: "Friday", icon: "🌺" },
+  { name: "Saturday", icon: "🌻" },
+  { name: "Sunday", icon: "💐" },
 ];
 
 let nextId = 100;
-const sample = (tag: Tag, done: boolean): Task => ({
+const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
   id: nextId++,
   title: "Title",
-  deadline: "*Deadline*",
+  deadline,
   description: "Description text that describes the task",
   tag,
   done,
 });
 
+type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
+
 function Index() {
   const [tasks, setTasks] = useState<Record<string, Task[]>>({
-    Monday: [sample("pink", true), sample("yellow", false)],
-    Tuesday: [sample("blue", true), sample("pink", true), sample("yellow", false)],
+    Monday: [sample("pink", true, "09:00"), sample("yellow", false, "14:30")],
+    Tuesday: [sample("blue", true, "10:00"), sample("pink", true, "13:00"), sample("yellow", false, "18:00")],
   });
-  const [openDay, setOpenDay] = useState<string | null>("Monday");
+  const [editing, setEditing] = useState<Editing>(null);
 
   const toggle = (day: string, id: number) =>
     setTasks((t) => ({ ...t, [day]: (t[day] ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) }));
 
-  const add = (day: string, task: Omit<Task, "id" | "done">) => {
-    setTasks((t) => ({ ...t, [day]: [...(t[day] ?? []), { ...task, id: nextId++, done: false }] }));
-    setOpenDay(null);
+  const save = ({ day, ...task }: Draft) => {
+    setTasks((t) => {
+      const next = { ...t };
+      if (editing?.mode === "edit") {
+        const old = (next[editing.day] ?? []).find((x) => x.id === editing.id);
+        next[editing.day] = (next[editing.day] ?? []).filter((x) => x.id !== editing.id);
+        next[day] = [...(next[day] ?? []), { ...task, id: editing.id, done: old?.done ?? false }];
+      } else {
+        next[day] = [...(next[day] ?? []), { ...task, id: nextId++, done: false }];
+      }
+      return next;
+    });
+    setEditing(null);
   };
 
   return (
@@ -65,93 +83,165 @@ function Index() {
     >
       <h1 className="mb-8 text-center text-5xl font-medium tracking-tight">Todo - Week</h1>
       <div className="mx-auto max-w-[720px] rounded-[3.5rem] bg-card px-6 py-12 shadow-soft sm:px-[90px]">
-        {DAYS.map((d, i) => (
-          <section key={d.name} className={i > 0 ? "mt-12" : ""}>
-            <div className="mb-8 flex items-center justify-between">
-              <h2 className="flex items-center gap-4 text-4xl font-medium">
-                <span className="text-3xl">{d.icon}</span>
-                {d.name}
-              </h2>
-              <button
-                aria-label={`Add task to ${d.name}`}
-                onClick={() => setOpenDay(openDay === d.name ? null : d.name)}
-                className="grid h-14 w-14 place-items-center rounded-full bg-tag-green text-ink shadow-soft transition hover:scale-105"
-              >
-                <Plus className="h-9 w-9" strokeWidth={3} />
-              </button>
-            </div>
-            {openDay === d.name && <TaskForm onSend={(t) => add(d.name, t)} />}
-            <ul className="space-y-4">
-              {(tasks[d.name] ?? []).map((t) => (
-                <li key={t.id} className="flex items-center gap-5">
-                  <button
-                    aria-label={t.done ? "Mark as not done" : "Mark as done"}
-                    onClick={() => toggle(d.name, t.id)}
-                    className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full ${tagBg[t.tag]}`}
-                  >
-                    {t.done && (
-                      <span className="grid h-11 w-11 place-items-center rounded-full bg-ink-soft text-card">
-                        <Check className="h-6 w-6" strokeWidth={3} />
-                      </span>
-                    )}
-                  </button>
-                  <div className={`flex-1 rounded-3xl px-6 py-5 ${tagBg[t.tag]} ${t.done ? "opacity-90" : ""}`}>
-                    <div className="flex justify-between gap-3 text-xl font-medium">
-                      <span>{t.title}</span>
-                      <span>{t.deadline}</span>
-                    </div>
-                    <p className="mt-2 text-lg">{t.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        {DAYS.map((d, i) => {
+          const open = editing?.day === d.name;
+          const editTask = editing?.mode === "edit" && open ? tasks[d.name]?.find((x) => x.id === editing.id) : undefined;
+          return (
+            <section key={d.name} className={i > 0 ? "mt-12" : ""}>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="flex items-center gap-4 text-4xl font-medium">
+                  <span className="text-3xl">{d.icon}</span>
+                  {d.name}
+                </h2>
+                <button
+                  aria-label={`Add task to ${d.name}`}
+                  onClick={() => setEditing(open && editing?.mode === "new" ? null : { mode: "new", day: d.name })}
+                  className="grid h-14 w-14 place-items-center rounded-full bg-tag-green text-ink shadow-soft transition duration-300 hover:scale-110 active:scale-95"
+                >
+                  <Plus className={`h-9 w-9 transition-transform duration-300 ${open && editing?.mode === "new" ? "rotate-45" : ""}`} strokeWidth={3} />
+                </button>
+              </div>
+              <div className={`grid transition-all duration-500 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  {open && (
+                    <TaskForm
+                      key={editing.mode === "edit" ? `e${editing.id}` : `n${d.name}`}
+                      initial={editTask ? { ...editTask, day: d.name } : { title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
+                      isEdit={editing.mode === "edit"}
+                      onSave={save}
+                      onCancel={() => setEditing(null)}
+                    />
+                  )}
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {(tasks[d.name] ?? []).map((t) => (
+                  <li key={t.id} className="flex animate-in fade-in slide-in-from-bottom-2 items-center gap-5 duration-300">
+                    <button
+                      aria-label={t.done ? "Mark as not done" : "Mark as done"}
+                      onClick={() => toggle(d.name, t.id)}
+                      className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full transition hover:scale-105 active:scale-90 ${tagBg[t.tag]}`}
+                    >
+                      {t.done && (
+                        <span className="grid h-11 w-11 animate-pop place-items-center rounded-full bg-ink-soft text-card">
+                          <Check className="h-6 w-6 animate-draw" strokeWidth={3} />
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setEditing({ mode: "edit", day: d.name, id: t.id })}
+                      className={`flex-1 rounded-3xl px-6 py-5 text-left transition duration-300 hover:-translate-y-0.5 hover:shadow-soft ${tagBg[t.tag]} ${t.done ? "opacity-70" : ""}`}
+                    >
+                      <div className="flex justify-between gap-3 text-xl font-medium">
+                        <span className={t.done ? "line-through decoration-2" : ""}>{t.title}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{t.deadline}</span>
+                      </div>
+                      <p className="mt-2 text-lg">{t.description}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
       </div>
     </main>
   );
 }
 
-function TaskForm({ onSend }: { onSend: (t: Omit<Task, "id" | "done">) => void }) {
-  const [title, setTitle] = useState("");
-  const [deadline, setDeadline] = useState("");
-  const [description, setDescription] = useState("");
-  const [tag, setTag] = useState<Tag>("pink");
-  const field = "rounded-xl border border-line bg-card px-4 py-3 outline-none focus:border-tag-pink placeholder:text-ink";
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(":");
+  const sel = "appearance-none rounded-xl border border-line bg-card px-3 py-2 text-2xl font-medium outline-none transition focus:border-tag-pink hover:bg-muted cursor-pointer";
+  return (
+    <div className="flex items-center gap-1">
+      <Clock className="mr-1 h-5 w-5" />
+      <select aria-label="Hour" value={h} onChange={(e) => onChange(`${e.target.value}:${m}`)} className={sel}>
+        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map((x) => <option key={x}>{x}</option>)}
+      </select>
+      <span className="text-2xl font-medium">:</span>
+      <select aria-label="Minute" value={m} onChange={(e) => onChange(`${h}:${e.target.value}`)} className={sel}>
+        {Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0")).map((x) => <option key={x}>{x}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function TaskForm({ initial, isEdit, onSave, onCancel }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void }) {
+  const [d, setD] = useState<Draft>(initial);
+  const [status, setStatus] = useState("");
+  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
+  const field = "rounded-xl border border-line bg-card px-4 py-3 outline-none transition focus:border-tag-pink placeholder:text-ink";
+
+  const share = async () => {
+    if (!d.title.trim()) return setStatus("Add a title first");
+    const text = `📝 ${d.title}\n📅 ${d.day} at ${d.deadline}\n${d.description}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: d.title, text });
+        setStatus("Shared!");
+      } else {
+        await navigator.clipboard.writeText(text);
+        setStatus("Copied — paste it to a friend!");
+      }
+    } catch {
+      setStatus("Sharing cancelled");
+    }
+  };
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!title.trim()) return;
-        onSend({ title, deadline: deadline || "*Deadline*", description, tag });
+        if (!d.title.trim()) return setStatus("Add a title first");
+        onSave(d);
       }}
-      className="mb-10 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-14"
+      className="mb-8 rounded-[2rem] border border-line bg-card p-6 shadow-soft sm:px-10"
     >
-      <div className="flex justify-between gap-4">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={`${field} w-32 text-2xl font-medium`} />
-        <input value={deadline} onChange={(e) => setDeadline(e.target.value)} placeholder="*Deadline*" className={`${field} w-48 text-right text-2xl font-medium`} />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
+        <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
       </div>
       <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        value={d.description}
+        onChange={(e) => set("description", e.target.value)}
         placeholder="Description text that describes the task..."
         rows={2}
         className={`${field} mt-6 w-full resize-none text-xl font-light`}
       />
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <button type="submit" className="rounded-full border border-line bg-card px-8 py-3 text-lg shadow-soft transition hover:bg-muted">
-          Send task
-        </button>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {DAYS.map((x) => (
+          <button
+            type="button"
+            key={x.name}
+            onClick={() => set("day", x.name)}
+            className={`rounded-full px-3 py-1.5 text-sm transition duration-200 hover:scale-105 ${d.day === x.name ? `${tagBg[d.tag]} font-medium shadow-soft` : "bg-muted"}`}
+          >
+            {x.name.slice(0, 3)}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5 flex gap-3">
         {TAGS.map((c) => (
           <button
             type="button"
             key={c}
             aria-label={`${c} tag`}
-            onClick={() => setTag(c)}
-            className={`h-12 w-12 rounded-full shadow-soft transition ${tagBg[c]} ${tag === c ? "ring-2 ring-ink-soft ring-offset-2" : ""}`}
+            onClick={() => set("tag", c)}
+            className={`h-10 w-10 rounded-full shadow-soft transition duration-200 hover:scale-110 ${tagBg[c]} ${d.tag === c ? "scale-110 ring-2 ring-ink-soft ring-offset-2" : ""}`}
           />
         ))}
+      </div>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button type="submit" className="rounded-full bg-tag-green px-7 py-3 text-lg font-medium shadow-soft transition hover:scale-105 active:scale-95">
+          {isEdit ? "Save changes" : "Add to list"}
+        </button>
+        <button type="button" onClick={share} className="rounded-full border border-line bg-card px-7 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-muted active:scale-95">
+          Send task
+        </button>
+        <button type="button" onClick={onCancel} className="px-3 py-3 text-lg opacity-70 transition hover:opacity-100">
+          Cancel
+        </button>
+        {status && <span className="animate-in fade-in text-sm">{status}</span>}
       </div>
     </form>
   );
