@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, Plus, Clock } from "lucide-react";
+import { Check, Plus, Clock, Trash2 } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
 export const Route = createFileRoute("/")({
@@ -39,22 +39,10 @@ const DAYS = [
   { name: "Sunday", icon: "💐" },
 ];
 
-export const STORAGE_KEY = "todo-week.tasks.v1";
+// v2: the demo week from v1 is dropped so the list starts empty.
+export const STORAGE_KEY = "todo-week.tasks.v2";
 
 let nextId = 100;
-const sample = (id: number, tag: Tag, done: boolean, deadline = "12:00"): Task => ({
-  id,
-  title: "Title",
-  deadline,
-  description: "Description text that describes the task",
-  tag,
-  done,
-});
-
-const seedTasks = (): Record<string, Task[]> => ({
-  Monday: [sample(1, "pink", true, "09:00"), sample(2, "yellow", false, "14:30")],
-  Tuesday: [sample(3, "blue", true, "10:00"), sample(4, "pink", true, "13:00"), sample(5, "yellow", false, "18:00")],
-});
 
 const isTask = (x: unknown): x is Task => {
   if (typeof x !== "object" || x === null) return false;
@@ -88,7 +76,7 @@ const parseStored = (raw: string): Record<string, Task[]> | null => {
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
 export function Index() {
-  const [tasks, setTasks] = useState<Record<string, Task[]>>(seedTasks);
+  const [tasks, setTasks] = useState<Record<string, Task[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
 
@@ -131,6 +119,11 @@ export function Index() {
     setEditing(null);
   };
 
+  const remove = (day: string, id: number) => {
+    setTasks((t) => ({ ...t, [day]: (t[day] ?? []).filter((x) => x.id !== id) }));
+    setEditing(null);
+  };
+
   return (
     <main
       className="min-h-screen bg-cover bg-center bg-fixed px-4 py-10 font-sans text-ink"
@@ -158,11 +151,12 @@ export function Index() {
               </div>
               <div className={`grid transition-all duration-500 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                 <div className="overflow-hidden">
-                  {open && (
+                  {open && editing && (
                     <TaskForm
                       key={editing.mode === "edit" ? `e${editing.id}` : `n${d.name}`}
                       initial={editTask ? { ...editTask, day: d.name } : { title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
                       isEdit={editing.mode === "edit"}
+                      onDelete={editing.mode === "edit" ? () => remove(editing.day, editing.id) : undefined}
                       onSave={save}
                       onCancel={() => setEditing(null)}
                     />
@@ -221,7 +215,7 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function TaskForm({ initial, isEdit, onSave, onCancel }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void }) {
+function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined }) {
   const [d, setD] = useState<Draft>(initial);
   const [status, setStatus] = useState("");
   const [sendOpen, setSendOpen] = useState(false);
@@ -283,6 +277,16 @@ function TaskForm({ initial, isEdit, onSave, onCancel }: { initial: Draft; isEdi
           >
             Send task
           </button>
+          {isEdit && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex items-center gap-2 rounded-full bg-tag-pink px-6 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-tag-pink active:scale-95"
+            >
+              <Trash2 className="h-5 w-5" />
+              Delete
+            </button>
+          )}
           <button type="button" onClick={onCancel} className="px-3 py-3 text-lg opacity-70 transition hover:opacity-100">
             Cancel
           </button>
