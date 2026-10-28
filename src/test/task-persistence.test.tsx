@@ -36,12 +36,19 @@ describe("Task persistence", () => {
     expect(stored["Thursday"]?.[0]?.title).toBe("Water the plants");
   });
 
-  it("falls back to the sample week when stored data is unreadable", () => {
+  it("starts with an empty list when nothing was stored", () => {
+    render(<Index />);
+
+    expect(screen.queryByText("Pick up tickets")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: /^Mark as/ })).toHaveLength(0);
+  });
+
+  it("shows nothing when stored data is unreadable", () => {
     localStorage.setItem(STORAGE_KEY, "{not json");
 
     render(<Index />);
 
-    expect(screen.getAllByText("Title")).toHaveLength(5);
+    expect(screen.queryAllByRole("button", { name: /^Mark as/ })).toHaveLength(0);
   });
 
   it("does not reuse a saved task's number for a new task", () => {
