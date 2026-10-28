@@ -51,6 +51,15 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-tag-green: var(--tag-green);
+  --color-tag-yellow: var(--tag-yellow);
+  --color-tag-pink: var(--tag-pink);
+  --color-tag-blue: var(--tag-blue);
+  --shadow-soft: 0 6px 24px -8px oklch(0.6 0.08 10 / 0.25);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -63,6 +72,13 @@
 
 :root {
   --radius: 0.625rem;
+  --ink: oklch(0.25 0.01 30);
+  --ink-soft: oklch(0.38 0.02 330);
+  --line: oklch(0.95 0.01 20);
+  --tag-green: oklch(0.89 0.05 155);
+  --tag-yellow: oklch(0.93 0.09 95);
+  --tag-pink: oklch(0.87 0.06 350);
+  --tag-blue: oklch(0.87 0.04 215);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
