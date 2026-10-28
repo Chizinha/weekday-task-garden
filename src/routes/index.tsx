@@ -215,7 +215,7 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: () => void }) {
+function TaskForm({ initial, isEdit, onSave, onCancel, onDelete }: { initial: Draft; isEdit: boolean; onSave: (d: Draft) => void; onCancel: () => void; onDelete?: (() => void) | undefined }) {
   const [d, setD] = useState<Draft>(initial);
   const [status, setStatus] = useState("");
   const [sendOpen, setSendOpen] = useState(false);
