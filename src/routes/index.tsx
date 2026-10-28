@@ -119,6 +119,11 @@ export function Index() {
     setEditing(null);
   };
 
+  const remove = (day: string, id: number) => {
+    setTasks((t) => ({ ...t, [day]: (t[day] ?? []).filter((x) => x.id !== id) }));
+    setEditing(null);
+  };
+
   return (
     <main
       className="min-h-screen bg-cover bg-center bg-fixed px-4 py-10 font-sans text-ink"
@@ -146,11 +151,12 @@ export function Index() {
               </div>
               <div className={`grid transition-all duration-500 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                 <div className="overflow-hidden">
-                  {open && (
+                  {open && editing && (
                     <TaskForm
                       key={editing.mode === "edit" ? `e${editing.id}` : `n${d.name}`}
                       initial={editTask ? { ...editTask, day: d.name } : { title: "", deadline: "12:00", description: "", tag: "pink", day: d.name }}
                       isEdit={editing.mode === "edit"}
+                      onDelete={editing.mode === "edit" ? () => remove(editing.day, editing.id) : undefined}
                       onSave={save}
                       onCancel={() => setEditing(null)}
                     />
