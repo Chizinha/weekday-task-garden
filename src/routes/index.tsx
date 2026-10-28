@@ -258,7 +258,7 @@ function TaskForm({ initial, isEdit, onSave, onCancel, onDelete, inPlace = false
         className={`rounded-[2rem] border border-line p-6 shadow-soft sm:px-10 ${accent} ${inPlace ? "flex-1 animate-in fade-in zoom-in-95 duration-300" : "mb-8"}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-40 text-2xl font-medium`} />
+          <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} min-w-40 flex-1 text-2xl font-medium`} />
           <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
         </div>
         <textarea
