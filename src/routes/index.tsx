@@ -170,7 +170,7 @@ export function Index() {
                         <>
                           <span
                             aria-hidden="true"
-                            className={`mt-1 grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full ${tagBg[t.tag]}`}
+                            className={`mt-6 grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full ${tagBg[t.tag]}`}
                           >
                             <Pencil className="h-6 w-6" strokeWidth={2.5} />
                           </span>
@@ -257,8 +257,8 @@ function TaskForm({ initial, isEdit, onSave, onCancel, onDelete, inPlace = false
         }}
         className={`rounded-[2rem] border border-line p-6 shadow-soft sm:px-10 ${accent} ${inPlace ? "flex-1 animate-in fade-in zoom-in-95 duration-300" : "mb-8"}`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} min-w-40 flex-1 text-2xl font-medium`} />
+        <input value={d.title} onChange={(e) => set("title", e.target.value)} placeholder="Title" className={`${field} w-full text-2xl font-medium`} />
+        <div className="mt-4 flex justify-end">
           <TimePicker value={d.deadline} onChange={(v) => set("deadline", v)} />
         </div>
         <textarea
