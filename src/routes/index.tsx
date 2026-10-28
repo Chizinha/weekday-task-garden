@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, Plus, Clock } from "lucide-react";
+import { Check, Plus, Clock, Trash2 } from "lucide-react";
 import bg from "@/assets/floral-bg.jpg";
 
 export const Route = createFileRoute("/")({
@@ -277,6 +277,16 @@ function TaskForm({ initial, isEdit, onSave, onCancel }: { initial: Draft; isEdi
           >
             Send task
           </button>
+          {isEdit && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex items-center gap-2 rounded-full bg-tag-pink px-6 py-3 text-lg shadow-soft transition hover:scale-105 hover:bg-tag-pink active:scale-95"
+            >
+              <Trash2 className="h-5 w-5" />
+              Delete
+            </button>
+          )}
           <button type="button" onClick={onCancel} className="px-3 py-3 text-lg opacity-70 transition hover:opacity-100">
             Cancel
           </button>
