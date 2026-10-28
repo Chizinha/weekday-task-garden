@@ -51,7 +51,7 @@ const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
 
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
-function Index() {
+export function Index() {
   const [tasks, setTasks] = useState<Record<string, Task[]>>({
     Monday: [sample("pink", true, "09:00"), sample("yellow", false, "14:30")],
     Tuesday: [sample("blue", true, "10:00"), sample("pink", true, "13:00"), sample("yellow", false, "18:00")],
