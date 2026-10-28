@@ -60,12 +60,12 @@ const isTask = (x: unknown): x is Task => {
   if (typeof x !== "object" || x === null) return false;
   const t = x as Record<string, unknown>;
   return (
-    typeof t.id === "number" &&
-    typeof t.title === "string" &&
-    typeof t.deadline === "string" &&
-    typeof t.description === "string" &&
-    typeof t.done === "boolean" &&
-    TAGS.includes(t.tag as Tag)
+    typeof t["id"] === "number" &&
+    typeof t["title"] === "string" &&
+    typeof t["deadline"] === "string" &&
+    typeof t["description"] === "string" &&
+    typeof t["done"] === "boolean" &&
+    TAGS.includes(t["tag"] as Tag)
   );
 };
 

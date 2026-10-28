@@ -33,7 +33,7 @@ describe("Task persistence", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to list" }));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as Record<string, { title: string }[]>;
-    expect(stored.Thursday?.[0]?.title).toBe("Water the plants");
+    expect(stored["Thursday"]?.[0]?.title).toBe("Water the plants");
   });
 
   it("falls back to the sample week when stored data is unreadable", () => {
@@ -53,6 +53,6 @@ describe("Task persistence", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to list" }));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as Record<string, { id: number }[]>;
-    expect(stored.Monday.map((t) => t.id)).toEqual([140, 141]);
+    expect(stored["Monday"]?.map((t) => t.id)).toEqual([140, 141]);
   });
 });
