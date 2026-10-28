@@ -39,22 +39,10 @@ const DAYS = [
   { name: "Sunday", icon: "💐" },
 ];
 
-export const STORAGE_KEY = "todo-week.tasks.v1";
+// v2: the demo week from v1 is dropped so the list starts empty.
+export const STORAGE_KEY = "todo-week.tasks.v2";
 
 let nextId = 100;
-const sample = (id: number, tag: Tag, done: boolean, deadline = "12:00"): Task => ({
-  id,
-  title: "Title",
-  deadline,
-  description: "Description text that describes the task",
-  tag,
-  done,
-});
-
-const seedTasks = (): Record<string, Task[]> => ({
-  Monday: [sample(1, "pink", true, "09:00"), sample(2, "yellow", false, "14:30")],
-  Tuesday: [sample(3, "blue", true, "10:00"), sample(4, "pink", true, "13:00"), sample(5, "yellow", false, "18:00")],
-});
 
 const isTask = (x: unknown): x is Task => {
   if (typeof x !== "object" || x === null) return false;
@@ -88,7 +76,7 @@ const parseStored = (raw: string): Record<string, Task[]> | null => {
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
 export function Index() {
-  const [tasks, setTasks] = useState<Record<string, Task[]>>(seedTasks);
+  const [tasks, setTasks] = useState<Record<string, Task[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
 
