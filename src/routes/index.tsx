@@ -51,10 +51,10 @@ function Index() {
   const [openDay, setOpenDay] = useState<string | null>("Monday");
 
   const toggle = (day: string, id: number) =>
-    setTasks((t) => ({ ...t, [day]: t[day].map((x) => (x.id === id ? { ...x, done: !x.done } : x)) }));
+    setTasks((t) => ({ ...t, [day]: (t[day] ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) }));
 
   const add = (day: string, task: Omit<Task, "id" | "done">) => {
-    setTasks((t) => ({ ...t, [day]: [...t[day], { ...task, id: nextId++, done: false }] }));
+    setTasks((t) => ({ ...t, [day]: [...(t[day] ?? []), { ...task, id: nextId++, done: false }] }));
     setOpenDay(null);
   };
 
@@ -82,7 +82,7 @@ function Index() {
             </div>
             {openDay === d.name && <TaskForm onSend={(t) => add(d.name, t)} />}
             <ul className="space-y-4">
-              {tasks[d.name].map((t) => (
+              {(tasks[d.name] ?? []).map((t) => (
                 <li key={t.id} className="flex items-center gap-5">
                   <button
                     aria-label={t.done ? "Mark as not done" : "Mark as done"}
