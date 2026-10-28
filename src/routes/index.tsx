@@ -39,9 +39,11 @@ const DAYS = [
   { name: "Sunday", icon: "💐" },
 ];
 
+export const STORAGE_KEY = "todo-week.tasks.v1";
+
 let nextId = 100;
-const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
-  id: nextId++,
+const sample = (id: number, tag: Tag, done: boolean, deadline = "12:00"): Task => ({
+  id,
   title: "Title",
   deadline,
   description: "Description text that describes the task",
@@ -49,14 +51,67 @@ const sample = (tag: Tag, done: boolean, deadline = "12:00"): Task => ({
   done,
 });
 
+const seedTasks = (): Record<string, Task[]> => ({
+  Monday: [sample(1, "pink", true, "09:00"), sample(2, "yellow", false, "14:30")],
+  Tuesday: [sample(3, "blue", true, "10:00"), sample(4, "pink", true, "13:00"), sample(5, "yellow", false, "18:00")],
+});
+
+const isTask = (x: unknown): x is Task => {
+  if (typeof x !== "object" || x === null) return false;
+  const t = x as Record<string, unknown>;
+  return (
+    typeof t["id"] === "number" &&
+    typeof t["title"] === "string" &&
+    typeof t["deadline"] === "string" &&
+    typeof t["description"] === "string" &&
+    typeof t["done"] === "boolean" &&
+    TAGS.includes(t["tag"] as Tag)
+  );
+};
+
+// Stored data can be old, half-written or hand-edited, so only accept a clean shape.
+const parseStored = (raw: string): Record<string, Task[]> | null => {
+  try {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
+    const out: Record<string, Task[]> = {};
+    for (const [day, list] of Object.entries(data)) {
+      if (!Array.isArray(list) || !list.every(isTask)) return null;
+      out[day] = list as Task[];
+    }
+    return out;
+  } catch {
+    return null;
+  }
+};
+
 type Editing = { mode: "new"; day: string } | { mode: "edit"; day: string; id: number } | null;
 
 export function Index() {
-  const [tasks, setTasks] = useState<Record<string, Task[]>>({
-    Monday: [sample("pink", true, "09:00"), sample("yellow", false, "14:30")],
-    Tuesday: [sample("blue", true, "10:00"), sample("pink", true, "13:00"), sample("yellow", false, "18:00")],
-  });
+  const [tasks, setTasks] = useState<Record<string, Task[]>>(seedTasks);
+  const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
+
+  // Read stored tasks after hydration so the server and the first client render match.
+  useEffect(() => {
+    const stored = parseStored(localStorage.getItem(STORAGE_KEY) ?? "");
+    if (stored) {
+      const maxId = Object.values(stored).flat().reduce((m, t) => Math.max(m, t.id), 0);
+      nextId = Math.max(nextId, maxId + 1);
+      setTasks(stored);
+    }
+    setLoaded(true);
+  }, []);
+
+  // Save on every change, but only once the stored value has been read back.
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch {
+      // Storage full or blocked: this visit still works, nothing is lost in memory.
+    }
+  }, [tasks, loaded]);
 
   const toggle = (day: string, id: number) =>
     setTasks((t) => ({ ...t, [day]: (t[day] ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) }));
